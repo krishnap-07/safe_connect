@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hospital Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="card login-card">
+        <div class="card-header login-header">
+          <h2>Hospital Login</h2>
+          <p>Access hospital dashboard for patient admissions and records.</p>
+        </div>
+        <div class="card-body login-body">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, msg in messages %}
+              <div class="result">{{ msg }}</div>
+            {% endfor %}
+          {% endwith %}
+          <form method="post" class="form-row">
+            <div class="field">
+              <label>Username</label>
+              <input name="username" placeholder="Enter username" required />
+            </div>
+            <div class="field" style="margin-top: 10px;">
+              <label>Password</label>
+              <input type="password" name="password" placeholder="Enter password" required />
+            </div>
+            <button class="btn" type="submit">Login as Hospital</button>
+          </form>
+          <p style="text-align: center; margin-top: 15px; font-size: 12px; color: #94a3b8;">
+            Don't have an account? <a href="{{ url_for('incidents.hospital_register') }}" style="color: #3b82f6; text-decoration: none; font-weight: bold;">Register your hospital here</a>
+          </p>
+          <a href="{{ url_for('incidents.index') }}" class="login-back">← Back to Main Menu</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

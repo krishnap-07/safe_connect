@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SAFE_CONNECT | Report Incident</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>SAFE_CONNECT</strong>
+        </div>
+        <div class="nav" style="display: flex; align-items: center; gap: 10px;">
+          <button id="langToggleBtn" class="btn" style="padding: 4px 10px; font-size: 12px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; cursor: pointer;">🌐 English</button>
+          <a href="{{ url_for('incidents.index') }}" data-i18n="nav_gateway">← Back to Gateway</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="grid">
+        <!-- MAP COLUMN -->
+        <div class="map-col">
+          <div style="width: 100%; min-height: 250px;">
+            <div class="card" id="mapCard">
+              <div id="map" style="border-radius: 24px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NEARBY INCIDENTS COLUMN -->
+        <div class="nearby-col">
+          <div class="card" id="nearbyCard" style="display: none;">
+            <div class="card-header">
+              <h2 data-i18n="nearby_title">Nearby Incidents</h2>
+              <p data-i18n="nearby_desc">Live alerts around your location.</p>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Disaster</th>
+                      <th>Distance</th>
+                      <th>Status</th>
+                      <th>Allocated Hospital</th>
+                    </tr>
+                  </thead>
+                  <tbody id="nearbyTableBody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- FORM -->
+        <div class="card">
+          <div class="card-header">
+            <h2 data-i18n="report_title">Report an incident</h2>
+            <p data-i18n="report_desc">Upload an image, add details, and submit. The backend runs human detection + disaster classification.</p>
+          </div>
+
+          <div class="card-body">
+            <div class="pill" style="margin-bottom: 10px;">
+              <span data-i18n="coordinates">Coordinates:</span> <span id="coordText">not set</span>
+            </div>
+
+            <button class="btn" type="button" id="locateBtn" style="width: 100%; margin-bottom: 12px;" data-i18n="use_location">
+              Use my location
+            </button>
+
+            <form id="reportForm" enctype="multipart/form-data">
+              <div class="form-row">
+
+                <div class="field">
+                  <label for="description" data-i18n="description_label">Description</label>
+                  <textarea id="description" name="description" required 
+                    data-i18n-placeholder="description_placeholder" placeholder="What happened? Any visible damage, injuries, trapped people, etc."></textarea>
+                </div>
+
+                <div class="field">
+                  <label for="image" data-i18n="upload_image">Upload image</label>
+                  <input id="image" name="image" type="file" accept="image/*" required />
+                  <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
+                    <img id="imagePreview" src="" alt="Image Preview" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #ccc;"/>
+                  </div>
+                </div>
+
+                <script>
+                  document.getElementById('image').addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = function(e) {
+                        document.getElementById('imagePreview').src = e.target.result;
+                        document.getElementById('imagePreviewContainer').style.display = 'block';
+                      }
+                      reader.readAsDataURL(file);
+                    } else {
+                      document.getElementById('imagePreviewContainer').style.display = 'none';
+                      document.getElementById('imagePreview').src = '';
+                    }
+                  });
+                </script>
+
+                <!-- Hidden fields for map -->
+                <input type="hidden" id="latitude" name="latitude" />
+                <input type="hidden" id="longitude" name="longitude" />
+
+                <button class="btn" id="submitBtn" type="submit" style="width: 100%;" data-i18n="submit_btn">
+                  Submit report
+                </button>
+              </div>
+            </form>
+
+            <!-- RESULT -->
+            <div class="result" id="resultBox" style="white-space: pre-wrap;"></div>
+
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </div>
+
+    <script>
+      const translations = {
+        "en": {
+          "nav_gateway": "← Back to Gateway",
+          "nearby_title": "Nearby Incidents",
+          "nearby_desc": "Live alerts around your location.",
+          "report_title": "Report an incident",
+          "report_desc": "Upload an image, add details, and submit. The backend runs human detection + disaster classification.",
+          "coordinates": "Coordinates:",
+          "use_location": "Use my location",
+          "description_label": "Description",
+          "description_placeholder": "What happened? Any visible damage, injuries, trapped people, etc.",
+          "upload_image": "Upload image",
+          "submit_btn": "Submit report",
+          "lang_btn": "🌐 English"
+        },
+        "hi": {
+          "nav_gateway": "← गेटवे पर वापस",
+          "nearby_title": "आसपास की घटनाएँ",
+          "nearby_desc": "आपके स्थान के आसपास लाइव अलर्ट।",
+          "report_title": "घटना की रिपोर्ट करें",
+          "report_desc": "एक छवि अपलोड करें, विवरण जोड़ें और सबमिट करें। बैकएंड मानव पहचान और आपदा वर्गीकरण चलाता है।",
+          "coordinates": "निर्देशांक:",
+          "use_location": "मेरे स्थान का उपयोग करें",
+          "description_label": "विवरण",
+          "description_placeholder": "क्या हुआ? कोई दिखाई देने वाली क्षति, चोटें, फंसे हुए लोग आदि।",
+          "upload_image": "छवि अपलोड करें",
+          "submit_btn": "रिपोर्ट सबमिट करें",
+          "lang_btn": "🌐 हिंदी"
+        },
+        "mr": {
+          "nav_gateway": "← गेटवेवर परत जा",
+          "nearby_title": "जवळपासच्या घटना",
+          "nearby_desc": "तुमच्या स्थानाभोवती थेट सूचना.",
+          "report_title": "घटनेची नोंद करा",
+          "report_desc": "एक प्रतिमा अपलोड करा, तपशील जोडा आणि सबमिट करा. बॅकएंड मानवी ओळख आणि आपत्ती वर्गीकरण चालवते.",
+          "coordinates": "अक्षांश-रेखांश:",
+          "use_location": "माझे स्थान वापरा",
+          "description_label": "वर्णन",
+          "description_placeholder": "काय झाले? काही दृश्यमान नुकसान, जखम, अडकलेले लोक इ.",
+          "upload_image": "प्रतिमा अपलोड करा",
+          "submit_btn": "अहवाल सबमिट करा",
+          "lang_btn": "🌐 मराठी"
+        }
+      };
+
+      const langs = ["en", "hi", "mr"];
+      let currentLangIdx = 0;
+
+      document.getElementById("langToggleBtn").addEventListener("click", function() {
+        currentLangIdx = (currentLangIdx + 1) % langs.length;
+        const lang = langs[currentLangIdx];
+        
+        // Update button text
+        this.textContent = translations[lang]["lang_btn"];
+
+        // Update all elements with data-i18n
+        document.querySelectorAll("[data-i18n]").forEach(el => {
+          const key = el.getAttribute("data-i18n");
+          if (translations[lang][key]) {
+            el.textContent = translations[lang][key];
+          }
+        });
+
+        // Update all elements with data-i18n-placeholder
+        document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+          const key = el.getAttribute("data-i18n-placeholder");
+          if (translations[lang][key]) {
+            el.setAttribute("placeholder", translations[lang][key]);
+          }
+        });
+      });
+    </script>
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  </body>
+</html>

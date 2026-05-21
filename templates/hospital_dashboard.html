@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hospital Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <strong>{{ hospital.name }}</strong>
+        <span></span>
+      </div>
+      <div class="nav">
+        <a href="{{ url_for('incidents.hospital_past_patients') }}">Past Patients</a>
+        <a href="{{ url_for('incidents.logout') }}">Logout</a>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, msg in messages %}
+    <div class="result" style="margin-bottom: 16px;">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <!-- TOP-RIGHT ACTIONS BAR -->
+    <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 16px; position: relative; z-index: 50;">
+      <!-- Alerts Dropdown Button -->
+      <div style="position: relative;">
+        <button id="alertsBtn" class="btn warning" style="padding: 6px 12px; font-size: 11px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.4); color: #ffc107; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          Alerts 🔔 <span id="alertsBadge" style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 12px; font-weight: bold; font-size: 10px;">0</span>
+        </button>
+        
+        <div id="alertsDropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 8px; width: 280px; background: var(--panel); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px; padding: 12px; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+          <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #ffc107; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Recent Notifications</h3>
+          <div id="notificationBox" style="max-height: 200px; overflow-y: auto;">
+            <p style="font-size: 10px; margin: 0;">Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Stats Grid -->
+    <div class="grid grid-stats" style="grid-template-columns: repeat(4, 1fr); align-items: stretch;">
+      {% set total_assigned = incidents | length %}
+      {% set pending_actions = incidents | selectattr('status', 'equalto', 'NEW') | list | length %}
+      {% set admitted_count = records | selectattr('admitted', 'equalto', True) | list | length %}
+
+      <div class="card">
+        <div class="card-body"><strong>Total Assigned</strong>
+          <div class="stat-value">{{ total_assigned }}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body"><strong>Pending Actions</strong>
+          <div class="stat-value">{{ pending_actions }}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body"><strong>Admitted Patients</strong>
+          <div class="stat-value">{{ admitted_count }}</div>
+        </div>
+      </div>
+
+      <!-- Manage Capacity Box -->
+      <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header" style="padding: 12px 24px;">
+          <h2 style="font-size: 16px; margin: 0;">Manage Capacity</h2>
+        </div>
+        <div class="card-body" style="padding: 12px 24px; display: flex; justify-content: center; align-items: center;">
+          <form method="post" action="{{ url_for('incidents.update_hospital_details_route') }}"
+            style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" name="total_beds" value="{{ hospital.total_beds or 50 }}" required
+              style="width: 80px; padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white;"
+              min="0">
+            <span style="font-size: 12px;">Total Beds</span>
+            <button class="btn" type="submit" style="padding: 6px 12px; font-size: 12px; height: 100%;">Update</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Pending Actions Row -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2>Pending Actions</h2>
+        <p>Incidents assigned to you that need a rescue van dispatched.</p>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Disaster</th>
+                <th>Location</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in incidents %}
+              {% if i.status == "NEW" %}
+              <tr>
+                <td><strong>#{{ i.id }}</strong></td>
+                <td>{{ i.description }}</td>
+                <td>{{ i.disaster_type }}</td>
+                <td>{{ "%.6f"|format(i.latitude) }}, {{ "%.6f"|format(i.longitude) }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('incidents.plan_executed', incident_id=i.id) }}">
+                    <button class="btn danger" type="submit" style="padding: 8px 14px; font-size: 12px;">Plan
+                      Executed</button>
+                  </form>
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+              {% if pending_actions == 0 %}
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--muted); padding: 20px;">No pending actions.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row: 2 Columns -->
+    <div class="grid" style="grid-template-columns: 1fr 1.5fr; gap: 24px; align-items: stretch;">
+      <!-- Admission Entry -->
+      <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+          <h2>Part 1: Admission Entry</h2>
+          <p>Add or edit patient status.</p>
+        </div>
+        <div class="card-body">
+          <form method="post" class="form-row" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="field">
+              <label>Assigned Incident</label>
+              <select name="incident_id" style="padding: 10px;">
+                <option value="">No incident mapping</option>
+                {% for i in incidents %}
+                <option value="{{ i.id }}">#{{ i.id }} - {{ i.description[:50] }}...</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field"><label>Patient Name</label><input name="patient_name" required style="padding: 10px;" />
+            </div>
+            <div class="field"><label>Condition</label><input name="condition_status" required
+                placeholder="Critical / Stable / Observation" style="padding: 10px;" /></div>
+            <div class="field">
+              <label>Admitted</label>
+              <select name="admitted" style="padding: 10px;">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="field"><label>Notes</label><textarea name="notes"
+                style="min-height: 80px; padding: 10px;"></textarea></div>
+            <button class="btn" type="submit" style="margin-top: 8px; width: 100%;">Save Record</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Patient Records -->
+      <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+          <h2>Part 2: Existing Patient Records</h2>
+          <p>Overview of admitted patients and conditions.</p>
+        </div>
+        <div class="card-body" style="flex: 1; overflow-y: auto; max-height: 540px;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Incident</th>
+                  <th>Patient</th>
+                  <th>Condition</th>
+                  <th>Admitted</th>
+                  <th>Notes</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set has_records = false %}
+                {% for r in records %}
+                {% set has_records = true %}
+                <tr>
+                  <td><strong>#{{ r.id }}</strong></td>
+                  <td>{{ r.incident_id or "-" }}</td>
+                  <td>{{ r.patient_name }}</td>
+                  <td>{{ r.condition_status }}</td>
+                  <td>{% if r.admitted %}<span class="pill danger">YES</span>{% else %}<span class="pill ok">NO</span>{%
+                    endif %}</td>
+                  <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    title="{{ r.notes }}">{{ r.notes }}</td>
+                  <td><small>{{ r.updated_at[:16] if r.updated_at else '-' }}</small></td>
+                </tr>
+                {% endfor %}
+                {% if not has_records %}
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">No patient records
+                    registered yet.</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+
+</html>

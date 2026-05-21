@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Past Patients - {{ hospital.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <strong>{{ hospital.name }}</strong>
+        <span>Past Patients</span>
+      </div>
+      <div class="nav">
+        <a href="{{ url_for('incidents.hospital_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('incidents.logout') }}">Logout</a>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="card" style="display: flex; flex-direction: column; margin-top: 24px;">
+      <div class="card-header">
+        <h2>Past Admitted Patients</h2>
+        <p>Complete history of patient records and their conditions.</p>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Incident</th>
+                <th>Patient</th>
+                <th>Condition</th>
+                <th>Admitted</th>
+                <th>Notes</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set has_records = false %}
+              {% for r in records %}
+              {% set has_records = true %}
+              <tr>
+                <td><strong>#{{ r.id }}</strong></td>
+                <td>{{ r.incident_id or "-" }}</td>
+                <td>{{ r.patient_name }}</td>
+                <td>{{ r.condition_status }}</td>
+                <td>{% if r.admitted %}<span class="pill danger">YES</span>{% else %}<span class="pill ok">NO</span>{%
+                  endif %}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                  title="{{ r.notes }}">{{ r.notes }}</td>
+                <td><small>{{ r.updated_at[:16] if r.updated_at else '-' }}</small></td>
+              </tr>
+              {% endfor %}
+              {% if not has_records %}
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">No patient records
+                  registered yet.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

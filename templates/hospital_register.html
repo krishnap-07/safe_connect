@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hospital Register</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>SAFE_CONNECT</strong>
+        </div>
+        <div class="nav">
+          <a href="{{ url_for('incidents.index') }}">Back to Home</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="container" style="max-width: 900px; padding-top: 30px;">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- MAP -->
+        <div style="width: 100%; min-height: 250px;">
+          <div class="card map-card-expandable">
+            <div class="card-header">
+              <h2>Select Location</h2>
+              <p>Click on the map or use your current location.</p>
+              <button type="button" id="currentLocBtn" class="btn warning" style="margin-top: 8px; padding: 6px 12px; font-size: 12px; background: rgba(255,193,7,0.1); color: #ffc107; border: 1px solid #ffc107;">📍 Use My Current Location</button>
+            </div>
+            <div id="regMap" class="expandable-map" style="border-radius: 0 0 24px 24px;"></div>
+          </div>
+        </div>
+
+        <!-- FORM -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Register Hospital</h2>
+            <p>Registered hospitals can manage admitted patient records.</p>
+          </div>
+          <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, msg in messages %}
+                <div class="result">{{ msg }}</div>
+              {% endfor %}
+            {% endwith %}
+            <form method="post" class="form-row" enctype="multipart/form-data">
+              <div class="field"><label>Hospital Name</label><input name="name" required /></div>
+              <div class="field"><label>Username</label><input name="username" required /></div>
+              <div class="field"><label>Password</label><input type="password" name="password" required /></div>
+              <div class="field"><label>Hospital Photo</label><input type="file" name="image" accept="image/*" required /></div>
+              <div class="field"><label>Message</label><textarea name="message" required style="width: 100%; min-height: 60px; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;" placeholder="Message to officer for approval..."></textarea></div>
+              <div class="field"><label>Latitude</label><input type="number" step="any" name="latitude" id="latInput" required readonly /></div>
+              <div class="field"><label>Longitude</label><input type="number" step="any" name="longitude" id="lonInput" required readonly /></div>
+              <button class="btn" type="submit" style="width: 100%;">Register Hospital</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const map = L.map('regMap').setView([18.5204, 73.8567], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      
+      {% if hospitals %}
+        const hospitalIcon = L.divIcon({
+          className: "hospital-marker-wrap",
+          html: `<div class="hospital-pin" style="background:#4a90e2; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);">H</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        });
+        {% for h in hospitals %}
+          L.marker([{{ h.latitude }}, {{ h.longitude }}], {icon: hospitalIcon})
+            .addTo(map)
+            .bindPopup("Registered: {{ h.name }}");
+        {% endfor %}
+      {% endif %}
+
+      let marker;
+      map.on('click', function(e) {
+        document.getElementById('latInput').value = e.latlng.lat.toFixed(6);
+        document.getElementById('lonInput').value = e.latlng.lng.toFixed(6);
+        if (marker) map.removeLayer(marker);
+        marker = L.marker(e.latlng).addTo(map);
+      });
+      const mapCard = document.querySelector(".map-card-expandable");
+      if (mapCard) {
+        mapCard.addEventListener("transitionend", () => {
+          map.invalidateSize();
+        });
+      }
+
+      document.getElementById('currentLocBtn').addEventListener('click', function() {
+        if ("geolocation" in navigator) {
+          this.textContent = "Locating...";
+          navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            document.getElementById('latInput').value = lat.toFixed(6);
+            document.getElementById('lonInput').value = lng.toFixed(6);
+            map.setView([lat, lng], 15);
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng]).addTo(map);
+            document.getElementById('currentLocBtn').textContent = "📍 Use My Current Location";
+          }, function(error) {
+            alert("Could not get location. Please click on the map manually.");
+            document.getElementById('currentLocBtn').textContent = "📍 Use My Current Location";
+          });
+        } else {
+          alert("Geolocation is not supported by your browser.");
+        }
+      });
+    </script>
+  </body>
+</html>

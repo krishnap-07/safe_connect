@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SAFE_CONNECT | Gateway</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #18181b;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: #fafafa;
+        overflow-x: hidden;
+      }
+
+      /* Subtle animated background grid */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+      }
+
+      /* Ambient glow behind hero */
+      body::after {
+        content: "";
+        position: fixed;
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 800px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .landing-wrapper {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        padding: 60px 24px 40px;
+      }
+
+      /* Status bar */
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        font-size: 12px;
+        color: #22c55e;
+        margin-bottom: 32px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        animation: blink 2s infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+
+      /* Hero */
+      .hero-title {
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin: 0 0 16px;
+        text-align: center;
+        line-height: 1.1;
+      }
+      .hero-title .accent { color: #3b82f6; }
+
+      .hero-subtitle {
+        color: #a1a1aa;
+        font-size: 1.1rem;
+        max-width: 520px;
+        text-align: center;
+        line-height: 1.6;
+        margin: 0 0 56px;
+      }
+
+      /* Portal cards grid */
+      .portal-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        max-width: 900px;
+        width: 100%;
+      }
+
+      .portal-card {
+        position: relative;
+        background: #27272a;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 16px;
+        padding: 36px 28px 32px;
+        cursor: pointer;
+        transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        text-decoration: none;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        overflow: hidden;
+      }
+
+      /* Colored top accent bar */
+      .portal-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #a1a1aa;
+        transition: height 0.3s ease;
+      }
+
+      .portal-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        border-color: rgba(255,255,255,0.12);
+        text-decoration: none;
+      }
+      .portal-card:hover::before { height: 4px; }
+
+      /* Specific card colors */
+      .card-citizen::before { background: #3b82f6; }
+      .card-citizen:hover { border-color: rgba(59,130,246,0.3); }
+
+      .card-hospital::before { background: #ef4444; }
+      .card-hospital:hover { border-color: rgba(239,68,68,0.3); }
+
+      .card-officer::before { background: #f59e0b; }
+      .card-officer:hover { border-color: rgba(245,158,11,0.3); }
+
+      .portal-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .card-citizen .portal-icon-wrap { background: rgba(59,130,246,0.15); }
+      .card-hospital .portal-icon-wrap { background: rgba(239,68,68,0.15); }
+      .card-officer .portal-icon-wrap { background: rgba(245,158,11,0.15); }
+
+      .portal-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .portal-desc {
+        font-size: 13px;
+        color: #a1a1aa;
+        line-height: 1.5;
+        margin-bottom: 20px;
+        flex: 1;
+      }
+
+      .portal-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #a1a1aa;
+        transition: color 0.3s;
+      }
+      .portal-card:hover .portal-action { color: #fff; }
+      .portal-action .arrow {
+        transition: transform 0.3s;
+      }
+      .portal-card:hover .portal-action .arrow {
+        transform: translateX(4px);
+      }
+
+      /* Bottom stats ticker */
+      .stats-ticker {
+        display: flex;
+        gap: 48px;
+        margin-top: 64px;
+        padding-top: 32px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+      .stat-item {
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 24px;
+        font-weight: 800;
+        color: #fff;
+        font-family: 'Courier New', Courier, monospace;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #71717a;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      /* Footer */
+      .landing-footer {
+        text-align: center;
+        padding: 24px;
+        font-size: 11px;
+        color: #52525b;
+        position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 768px) {
+        .portal-grid { grid-template-columns: 1fr; max-width: 400px; }
+        .hero-title { font-size: 2.2rem; }
+        .stats-ticker { flex-direction: column; gap: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="landing-wrapper">
+
+      <!-- Hero -->
+      <h1 class="hero-title">
+        SAFE<span class="accent">_</span>CONNECT
+      </h1>
+      <p class="hero-subtitle">
+        AI-powered disaster response and resource allocation system.
+        Real-time severity analysis, smart hospital routing, and coordinated rescue dispatch.
+      </p>
+
+      <!-- Portal Cards -->
+      <div class="portal-grid">
+
+        <!-- Citizen -->
+        <a href="{{ url_for('incidents.citizen') }}" class="portal-card card-citizen">
+          <div class="portal-icon-wrap">🌍</div>
+          <div class="portal-name">Citizen Portal</div>
+          <div class="portal-desc">Report a disaster instantly with GPS and photo evidence. No login required.</div>
+          <div class="portal-action">Report now <span class="arrow">→</span></div>
+        </a>
+
+        <!-- Hospital -->
+        <a href="{{ url_for('incidents.hospital_login') }}" class="portal-card card-hospital">
+          <div class="portal-icon-wrap">🏥</div>
+          <div class="portal-name">Hospital Hub</div>
+          <div class="portal-desc">Manage live bed capacity, patient admissions, and receive AI-routed victims.</div>
+          <div class="portal-action">Login <span class="arrow">→</span></div>
+        </a>
+
+        <!-- Officer -->
+        <a href="{{ url_for('incidents.officer_login') }}" class="portal-card card-officer">
+          <div class="portal-icon-wrap">🛡️</div>
+          <div class="portal-name">Officer</div>
+          <div class="portal-desc">Tactical dashboard for live incident tracking, team dispatch, and hospital oversight.</div>
+          <div class="portal-action">Access <span class="arrow">→</span></div>
+        </a>
+
+      </div>
+
+      <!-- Bottom stats -->
+      <div class="stats-ticker">
+        <div class="stat-item">
+          <div class="stat-number">YOLOv8</div>
+          <div class="stat-label">Human Detection</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">HAVERSINE</div>
+          <div class="stat-label">Smart Allocation</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">LIVE</div>
+          <div class="stat-label">Radar Map</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="landing-footer">
+      SAFE_CONNECT v2.0 &middot; AI-Powered Emergency Response &middot; Pune, India
+    </div>
+
+  </body>
+</html>

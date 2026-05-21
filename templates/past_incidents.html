@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Past Allocated Incidents</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>SAFE_CONNECT</strong>
+          <span>Officer - Past allocated disasters</span>
+        </div>
+        <div class="nav">
+          <a href="{{ url_for('incidents.dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('incidents.logout') }}">Logout</a>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h2>Past Incidents (Allocated)</h2>
+          <p>All incidents that have been allocated to a hospital.</p>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Created</th>
+                  <th>Description</th>
+                  <th>Severity</th>
+                  <th>Priority Score</th>
+                  <th>Allocated Hospital</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for i in incidents %}
+                <tr>
+                  <td>#{{ i.id }}</td>
+                  <td>{{ i.created_at }}</td>
+                  <td>{{ i.description }}</td>
+                  <td><span class="pill">{{ i.severity }}</span></td>
+                  <td>{{ i.priority_score or 0 }}%</td>
+                  <td>{{ i.assigned_hospital_name }}</td>
+                  <td><span class="pill">{{ i.status }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Officer Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="card login-card">
+        <div class="card-header login-header">
+          <h2>Main Officer Login</h2>
+          <p>Only officer can access the dashboard.</p>
+        </div>
+        <div class="card-body login-body">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, msg in messages %}
+              <div class="result">{{ msg }}</div>
+            {% endfor %}
+          {% endwith %}
+          <form method="post" class="form-row">
+            <div class="field">
+              <label>Username</label>
+              <input name="username" placeholder="Enter username" required />
+            </div>
+            <div class="field" style="margin-top: 10px;">
+              <label>Password</label>
+              <input type="password" name="password" placeholder="Enter password" required />
+            </div>
+            <button class="btn" type="submit">Login as Officer</button>
+          </form>
+          <a href="{{ url_for('incidents.index') }}" class="login-back">← Back to Main Menu</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

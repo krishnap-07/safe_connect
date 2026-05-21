@@ -1,0 +1,12 @@
+flask
+python-dotenv
+werkzeug
+numpy
+pillow
+opencv-python
+ultralytics
+tensorflow
+pandas
+scikit-learn
+google-generativeai
+requests

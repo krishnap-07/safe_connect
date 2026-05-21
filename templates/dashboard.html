@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SAFE_CONNECT | Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>SAFE_CONNECT</strong>
+          <span>Main officer control dashboard</span>
+        </div>
+        <div class="nav">
+          <a href="{{ url_for('incidents.past_incidents') }}">Past Incidents</a>
+          <a href="{{ url_for('incidents.logout') }}">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- TOP-RIGHT SMALL ACTIONS BAR -->
+      <div style="display: flex; justify-content: flex-end; align-items: flex-start; gap: 12px; margin-bottom: 16px; position: relative; z-index: 50;">
+        <a href="{{ url_for('incidents.past_incidents') }}" class="btn" style="padding: 6px 12px; font-size: 11px; height: fit-content; background: linear-gradient(135deg, #39d98a, #20a060);">View Resolved Disasters</a>
+        
+        <!-- Alerts Dropdown Button -->
+        <div style="position: relative;">
+          <button id="alertsBtn" class="btn warning" style="padding: 6px 12px; font-size: 11px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.4); color: #ffc107; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            Alerts 🔔 <span id="alertsBadge" style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 12px; font-weight: bold; font-size: 10px;">0</span>
+          </button>
+          
+          <div id="alertsDropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 8px; width: 280px; background: var(--panel); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px; padding: 12px; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+            <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #ffc107; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Recent Notifications</h3>
+            <div id="notificationBox" style="max-height: 200px; overflow-y: auto;">
+              <p style="font-size: 10px; margin: 0;">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TACTICAL DASHBOARD -->
+      <div class="tactical-grid">
+        
+        <!-- Left: Incident Queue -->
+        <div class="card">
+          <div class="card-header">
+            <h2><span style="font-size: 16px;">☷</span> Incident queue</h2>
+          </div>
+          <div class="card-body" style="padding: 16px; overflow-y: auto; flex: 1;">
+            {% set active_cases = incidents | selectattr('status', 'in', ['NEW', 'IN_PROGRESS']) | list %}
+            {% for i in active_cases %}
+            <div class="incident-card {{ i.severity | lower }}">
+              <div>
+                <strong style="font-size: 14px; color: var(--text);">{{ i.disaster_type }} — {{ i.description[:25] }}...</strong><br>
+                <span style="font-size: 11px; color: var(--muted);">{{ i.created_at[11:16] }} • {% if i.human_count %}{{ i.human_count }} persons detected{% else %}No injuries{% endif %}</span>
+              </div>
+              <span class="score-pill {{ i.severity | lower }}">{{ i.priority_score or 0 }}</span>
+            </div>
+            {% endfor %}
+            {% if not active_cases %}
+              <p style="color: var(--muted); text-align: center; font-size: 12px; margin-top: 20px;">No active incidents.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Middle: Map & Priority Distribution -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 style="margin: 0; font-size: 16px; color: var(--text);">🗺 Live radar map</h2>
+          </div>
+          
+          <div id="opsMiniMap" class="map-container-tactical"></div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h2>📊 Priority distribution</h2>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              {% set crit = incidents | selectattr('severity', 'equalto', 'CRITICAL') | list | length %}
+              {% set high = incidents | selectattr('severity', 'equalto', 'HIGH') | list | length %}
+              {% set med = incidents | selectattr('severity', 'equalto', 'MEDIUM') | list | length %}
+              {% set low = incidents | selectattr('severity', 'equalto', 'LOW') | list | length %}
+              
+              <div class="dist-bar-wrap">
+                <span class="dist-label">Critical</span>
+                <div class="dist-track"><div class="dist-fill" style="width: {{ [crit * 15, 100]|min }}%; background: var(--danger);"></div></div>
+                <span class="dist-count">{{ crit }}</span>
+              </div>
+              
+              <div class="dist-bar-wrap">
+                <span class="dist-label">High</span>
+                <div class="dist-track"><div class="dist-fill" style="width: {{ [high * 15, 100]|min }}%; background: var(--warning);"></div></div>
+                <span class="dist-count">{{ high }}</span>
+              </div>
+              
+              <div class="dist-bar-wrap">
+                <span class="dist-label">Medium</span>
+                <div class="dist-track"><div class="dist-fill" style="width: {{ [med * 15, 100]|min }}%; background: var(--accent);"></div></div>
+                <span class="dist-count">{{ med }}</span>
+              </div>
+              
+              <div class="dist-bar-wrap" style="margin-bottom: 0;">
+                <span class="dist-label">Low</span>
+                <div class="dist-track"><div class="dist-fill" style="width: {{ [low * 15, 100]|min }}%; background: var(--ok);"></div></div>
+                <span class="dist-count">{{ low }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Hospital Status & AI Dispatch -->
+        <div class="card">
+          <div class="card-header">
+            <h2>🏥 Hospital status</h2>
+          </div>
+          <div class="card-body" style="padding: 16px; flex: 1; overflow-y: auto;">
+            {% for ph in pending_hospitals %}
+            <div class="hospital-status-card">
+              <div class="status-icon pending">⏱</div>
+              <div style="flex: 1;">
+                <strong style="font-size: 13px;">{{ ph.name }}</strong><br>
+                <span style="font-size: 11px; color: var(--muted);">Pending approval</span>
+              </div>
+              <div style="text-align: right; font-size: 11px; color: var(--muted);">
+                {% if ph.nearest_distance > 0 %}{{ ph.nearest_distance | round(1) }}<br>km{% else %}N/A{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+            
+            {% for h in hospitals %}
+            <div class="hospital-status-card">
+              <div class="status-icon approved">✓</div>
+              <div style="flex: 1;">
+                <strong style="font-size: 13px;">{{ h.name }}</strong><br>
+                <span style="font-size: 11px; color: var(--muted);">{{ h.total_beds - (h.admitted_patients or 0) }} / {{ h.total_beds }} beds free</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          
+          <div class="card-header" style="border-top: 1px solid var(--border);">
+            <h2>🤖 AI dispatch recommendations</h2>
+          </div>
+          <div class="card-body" style="padding: 16px;">
+            {% set active = incidents | selectattr('status', 'equalto', 'NEW') | list %}
+            {% if active %}
+              {% set rec = active[0] %}
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+                <strong style="font-size: 13px; color: #fff;">Deploy {{ rec.help_team }} →</strong><br>
+                <span style="font-size: 12px; color: var(--muted);">Near {{ "%.4f"|format(rec.latitude) }}, {{ "%.4f"|format(rec.longitude) }}</span><br>
+                <span style="font-size: 11px; color: var(--warning);">{{ rec.disaster_type }} rescue required</span>
+              </div>
+            {% else %}
+              <p style="color: var(--muted); font-size: 12px; text-align: center;">No active dispatches required.</p>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: pointer;">
+      <span style="position: absolute; top: 20px; right: 40px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+      <img id="modalImage" style="max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+    </div>
+    
+    <script>
+      function openModal(imageSrc) {
+        document.getElementById('modalImage').src = imageSrc;
+        document.getElementById('imageModal').style.display = 'flex';
+      }
+      
+      document.getElementById('imageModal').onclick = function() {
+        this.style.display = 'none';
+      }
+    </script>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>
