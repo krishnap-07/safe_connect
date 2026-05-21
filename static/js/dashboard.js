@@ -12,10 +12,19 @@ function drawOpsLayers(map, data, isMini = false) {
   const incidentPointIconRadius = isMini ? 4 : 6;
 
   (data.incidents || []).forEach((i) => {
-    const style = severityStyle(i.severity || "LOW");
+    let style = severityStyle(i.severity || "LOW");
     let incidentMarker;
     
-    if (i.severity === "CRITICAL") {
+    if (i.status === "RESOLVED") {
+      style = { color: "#888", radius: 400 }; // Grey out resolved
+      incidentMarker = L.circleMarker([i.latitude, i.longitude], {
+        radius: isMini ? 3 : 5,
+        color: style.color,
+        fillColor: style.color,
+        fillOpacity: 0.8,
+        weight: 1
+      }).addTo(map);
+    } else if (i.severity === "CRITICAL") {
       const pulseIcon = L.divIcon({
         className: 'pulse-marker',
         iconSize: [20, 20],
@@ -153,3 +162,150 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = "none";
+}
+
+async function openHospitalReport(hospitalId) {
+  const modal = document.getElementById("hospitalReportModal");
+  const content = document.getElementById("hospitalModalContent");
+  if (!modal || !content) return;
+  
+  content.innerHTML = "Loading data...";
+  modal.style.display = "flex";
+  
+  try {
+    const resp = await fetch(`/api/hospital/${hospitalId}/report`);
+    const data = await resp.json();
+    
+    if (!data.success) {
+      content.innerHTML = `<p style="color: var(--danger);">Error: ${data.message}</p>`;
+      return;
+    }
+    
+    const h = data.hospital;
+    const incs = data.incidents || [];
+    const pats = data.patients || [];
+    
+    let html = `
+      <div style="margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: var(--accent);">${h.name}</h3>
+        <p style="margin: 0; font-size: 13px; color: var(--muted);">${h.total_beds - pats.length} / ${h.total_beds} beds free</p>
+      </div>
+      
+      <h4 style="margin-bottom: 8px; color: var(--text);">Assigned Disasters</h4>
+      ${incs.length > 0 ? 
+        `<ul style="list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 13px;">
+          ${incs.map(i => `<li style="padding: 8px; border: 1px solid var(--border); margin-bottom: 4px; border-radius: 4px; background: rgba(255,255,255,0.02);"><strong style="color: var(--warning);">#${i.id}</strong>: ${i.disaster_type} (Status: ${i.status})</li>`).join("")}
+        </ul>` : 
+        `<p style="font-size: 12px; color: var(--muted); margin-bottom: 20px;">No active disasters assigned.</p>`
+      }
+      
+      <h4 style="margin-bottom: 8px; color: var(--text);">Admitted Patients</h4>
+      ${pats.length > 0 ? 
+        `<table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); color: var(--muted);">
+              <th style="padding: 8px;">Name</th>
+              <th style="padding: 8px;">Condition</th>
+              <th style="padding: 8px;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pats.map(p => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 8px;">${p.patient_name}</td>
+                <td style="padding: 8px; color: ${p.condition_status === 'CRITICAL' ? 'var(--danger)' : p.condition_status === 'STABLE' ? 'var(--ok)' : 'var(--warning)'};">${p.condition_status}</td>
+                <td style="padding: 8px; color: var(--muted);">${p.notes || '-'}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>` :
+        `<p style="font-size: 12px; color: var(--muted);">No patients currently admitted.</p>`
+      }
+    `;
+    
+    content.innerHTML = html;
+  } catch (err) {
+    content.innerHTML = `<p style="color: var(--danger);">Failed to load hospital report.</p>`;
+  }
+}
+
+async function openIncidentDetails(incidentId) {
+  const modal = document.getElementById("incidentDetailModal");
+  const content = document.getElementById("incidentModalContent");
+  if (!modal || !content) return;
+  
+  content.innerHTML = "Loading intelligence...";
+  modal.style.display = "flex";
+  
+  try {
+    const resp = await fetch(`/api/incident/${incidentId}/details`);
+    const data = await resp.json();
+    
+    if (!data.success) {
+      content.innerHTML = `<p style="color: var(--danger);">Error: ${data.message}</p>`;
+      return;
+    }
+    
+    const i = data.incident;
+    
+    let html = `
+      <div style="display: flex; gap: 20px;">
+        ${i.image_path ? 
+          `<div style="flex: 1; min-width: 200px;">
+            <img src="/uploads/${i.image_path}" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" />
+           </div>` : 
+           `<div style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px dashed var(--border); min-width: 200px;">
+             <span style="color: var(--muted); font-size: 12px;">No image provided</span>
+           </div>`
+        }
+        
+        <div style="flex: 1.5; font-size: 13px; display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <span style="color: var(--muted); font-size: 11px;">CLASSIFICATION</span><br>
+            <strong style="font-size: 16px; color: var(--accent);">${i.disaster_type}</strong>
+            ${i.disaster_confidence ? `<span style="color: var(--muted); font-size: 11px; margin-left: 8px;">(${(i.disaster_confidence * 100).toFixed(1)}% conf)</span>` : ''}
+          </div>
+          
+          <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <span style="color: var(--muted); font-size: 11px;">PRIORITY SCORE</span><br>
+                <strong style="color: ${i.severity === 'CRITICAL' ? 'var(--danger)' : i.severity === 'HIGH' ? 'var(--warning)' : 'var(--ok)'}">${i.priority_score}% (${i.severity})</strong>
+              </div>
+              <div>
+                <span style="color: var(--muted); font-size: 11px;">HUMAN LIFE DETECTED</span><br>
+                <strong>${i.human_detected ? `<span style="color: var(--danger);">YES (${i.human_count} people)</span>` : '<span style="color: var(--ok);">NONE</span>'}</strong>
+              </div>
+              <div>
+                <span style="color: var(--muted); font-size: 11px;">DAMAGE LEVEL</span><br>
+                <strong>${i.damage_level || 'Unknown'}</strong>
+              </div>
+              <div>
+                <span style="color: var(--muted); font-size: 11px;">WATER DEPTH</span><br>
+                <strong>${i.water_depth || 'N/A'}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <span style="color: var(--muted); font-size: 11px;">GPS COORDINATES</span><br>
+            <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #fff;">${i.latitude.toFixed(6)}, ${i.longitude.toFixed(6)}</code>
+          </div>
+          
+          <div>
+            <span style="color: var(--muted); font-size: 11px;">CITIZEN DESCRIPTION</span><br>
+            <p style="margin: 4px 0 0 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid var(--border);">${i.description || 'No description provided.'}</p>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    content.innerHTML = html;
+  } catch (err) {
+    content.innerHTML = `<p style="color: var(--danger);">Failed to load incident intelligence.</p>`;
+  }
+}

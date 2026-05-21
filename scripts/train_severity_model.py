@@ -1,19 +1,20 @@
-import sys
-sys.path.insert(0, r"D:\SAFE_ROUTE (Disaster_management)\SAFE_ROUTE (Disaster_management)\SAFE_CONNECT\.venv311\Lib\site-packages")
-import os
-import random
-import pandas as pd
-import numpy as np
-import joblib
-from pathlib import Path
-
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestRegressor
+from pathlib import Path
+import joblib
+import numpy as np
+import pandas as pd
+import random
+import os
+import sys
+sys.path.insert(
+    0, r"D:\SAFE_ROUTE (Disaster_management)\SAFE_ROUTE (Disaster_management)\SAFE_CONNECT\.venv311\Lib\site-packages")
+
 
 # Ensure directories exist
 os.makedirs("models", exist_ok=True)
@@ -57,9 +58,10 @@ calm_texts = [
 data = []
 for _ in range(NUM_SAMPLES):
     d_type = random.choice(disaster_types)
-    h_count = int(np.random.gamma(2, 2))  # Right-skewed distribution for human count
+    # Right-skewed distribution for human count
+    h_count = int(np.random.gamma(2, 2))
     damage = random.choice(damage_levels)
-    
+
     # Determine base urgency to match text
     base_urgency = random.uniform(0, 1)
     if base_urgency > 0.7:
@@ -71,28 +73,28 @@ for _ in range(NUM_SAMPLES):
     else:
         text = random.choice(calm_texts)
         urgency_score = 5
-        
+
     # Calculate Ground Truth Severity (what the AI should learn)
     severity = 10
-    
+
     # Heuristics for the ground truth
     if d_type in ["FIRE", "EARTHQUAKE", "FLOOD"]:
         severity += 15
-        
+
     if damage == "Destroyed":
         severity += 30
     elif damage == "Partially Collapsed":
         severity += 15
-        
+
     severity += (h_count * 5)
     severity += urgency_score
-    
+
     # Add some random noise
     severity += np.random.normal(0, 5)
-    
+
     # Cap between 0 and 100
     severity = max(0, min(100, int(severity)))
-    
+
     data.append({
         "report_text": text,
         "disaster_type": d_type,
@@ -103,20 +105,24 @@ for _ in range(NUM_SAMPLES):
 
 df = pd.DataFrame(data)
 df.to_csv("data/synthetic_disaster_data.csv", index=False)
-print(f"   Generated {len(df)} samples and saved to data/synthetic_disaster_data.csv")
+print(
+    f"   Generated {len(df)} samples and saved to data/synthetic_disaster_data.csv")
 
 print("\n2. Building Scikit-Learn Multimodal Pipeline...")
 
 X = df[["report_text", "disaster_type", "human_count", "damage_level"]]
 y = df["severity_score"]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
 
 # Create the preprocessing steps for different feature types
 preprocessor = ColumnTransformer(
     transformers=[
-        ('text', TfidfVectorizer(max_features=100, stop_words='english'), 'report_text'),
-        ('cat', OneHotEncoder(handle_unknown='ignore'), ['disaster_type', 'damage_level']),
+        ('text', TfidfVectorizer(max_features=100,
+         stop_words='english'), 'report_text'),
+        ('cat', OneHotEncoder(handle_unknown='ignore'),
+         ['disaster_type', 'damage_level']),
         ('num', StandardScaler(), ['human_count'])
     ]
 )

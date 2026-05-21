@@ -13,12 +13,15 @@ class Hospital:
 
 
 DEFAULT_HOSPITALS: List[Hospital] = [
-    Hospital(name="Sassoon General Hospital", latitude=18.5286, longitude=73.8743),
+    Hospital(name="Sassoon General Hospital",
+             latitude=18.5286, longitude=73.8743),
     Hospital(name="Jehangir Hospital", latitude=18.5362, longitude=73.8849),
     Hospital(name="Ruby Hall Clinic", latitude=18.5368, longitude=73.8788),
-    Hospital(name="Deenanath Mangeshkar Hospital", latitude=18.5079, longitude=73.8077),
+    Hospital(name="Deenanath Mangeshkar Hospital",
+             latitude=18.5079, longitude=73.8077),
     Hospital(name="KEM Hospital Pune", latitude=18.5048, longitude=73.8628),
-    Hospital(name="Noble Hospital Hadapsar", latitude=18.4964, longitude=73.9260),
+    Hospital(name="Noble Hospital Hadapsar",
+             latitude=18.4964, longitude=73.9260),
 ]
 
 PUNE_BOUNDS = {
@@ -39,7 +42,8 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
-    a = math.sin(dlat / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlon / 2) ** 2
+    a = math.sin(dlat / 2) ** 2 + math.cos(p1) * \
+        math.cos(p2) * math.sin(dlon / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return r * c
 
@@ -58,7 +62,8 @@ def select_nearest_hospital(
         raise ValueError("No hospitals available for allocation.")
 
     best = hospitals[0]
-    best_dist = haversine_km(incident_lat, incident_lon, best.latitude, best.longitude)
+    best_dist = haversine_km(incident_lat, incident_lon,
+                             best.latitude, best.longitude)
 
     for h in hospitals[1:]:
         d = haversine_km(incident_lat, incident_lon, h.latitude, h.longitude)
@@ -72,7 +77,8 @@ def select_nearest_hospital(
 def hospitals_from_rows(rows: List[Dict[str, Any]]) -> List[Hospital]:
     parsed: List[Hospital] = []
     for row in rows:
-        parsed.append(Hospital(name=row["name"], latitude=float(row["latitude"]), longitude=float(row["longitude"])))
+        parsed.append(Hospital(name=row["name"], latitude=float(
+            row["latitude"]), longitude=float(row["longitude"])))
     return parsed
 
 
@@ -85,4 +91,3 @@ def is_pune_area(latitude: float, longitude: float) -> bool:
 
 def filter_pune_hospital_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [row for row in rows if is_pune_area(float(row["latitude"]), float(row["longitude"]))]
-

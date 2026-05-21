@@ -337,6 +337,7 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
 .card-header.warning h2 {
   background: linear-gradient(90deg, #ffcc66, #ff9933);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -346,6 +347,7 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
   margin-top: 8px;
   background: linear-gradient(135deg, #fff, #9fb0d0);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.5px;
 }

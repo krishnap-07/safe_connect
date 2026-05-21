@@ -14,4 +14,3 @@ def decide_priority(num_humans: int, disaster_type: str, disaster_conf: float) -
     elif disaster_conf > 0.5 and disaster_type not in ("unknown", "None", "", None):
         return "MEDIUM", 75
     return "LOW", 45
-

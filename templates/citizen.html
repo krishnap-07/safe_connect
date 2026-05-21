@@ -11,87 +11,298 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+      .citizen-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 24px;
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+        min-height: calc(100vh - 80px);
+      }
+
+      /* Left: Map fills available space */
+      .map-panel {
+        flex: 1.4;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0; /* Prevents overflow */
+        position: sticky;
+        top: 24px;
+        height: calc(100vh - 48px);
+      }
+      .map-panel .card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 350px;
+      }
+      .map-panel #map {
+        flex: 1;
+        width: 100%;
+        min-height: 250px;
+        border-radius: 0 0 12px 12px;
+      }
+
+      /* Right: Form panel with fixed max width for better readability */
+      .form-panel {
+        flex: 1;
+        min-width: 320px;
+        max-width: 480px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* GPS Coordinate strip */
+      .gps-strip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: rgba(59,130,246,0.08);
+        border: 1px solid rgba(59,130,246,0.2);
+        border-radius: 10px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 13px;
+        color: #93c5fd;
+      }
+      .gps-strip .gps-icon {
+        font-size: 18px;
+      }
+      .gps-strip #coordText {
+        flex: 1;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      /* Upload zone */
+      .upload-zone {
+        position: relative;
+        border: 2px dashed rgba(255,255,255,0.12);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: rgba(0,0,0,0.15);
+      }
+      .upload-zone:hover {
+        border-color: rgba(59,130,246,0.4);
+        background: rgba(59,130,246,0.05);
+      }
+      .upload-zone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .upload-icon { font-size: 32px; margin-bottom: 8px; }
+      .upload-label { font-size: 13px; color: var(--muted); }
+      .upload-label strong { color: #93c5fd; }
+
+      /* Image preview */
+      #imagePreviewContainer {
+        margin-top: 12px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      #imagePreview {
+        width: 100%;
+        max-height: 160px;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* Form Fields Enhancement */
+      .field label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e4e4e7;
+        margin-bottom: 8px;
+        display: block;
+      }
+      textarea, input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        font-family: inherit;
+        font-size: 14px;
+        transition: all 0.3s;
+      }
+      textarea:focus, input[type="text"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        background: rgba(0,0,0,0.3);
+      }
+
+      /* Submit button override */
+      .submit-action {
+        width: 100%;
+        padding: 16px;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        box-shadow: 0 4px 16px rgba(239,68,68,0.4);
+        border: none;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+      }
+      .submit-action:hover {
+        background: linear-gradient(135deg, #f87171, #dc2626);
+        box-shadow: 0 8px 25px rgba(239,68,68,0.6);
+        transform: translateY(-2px);
+      }
+      .submit-action:active {
+        transform: translateY(1px);
+        box-shadow: 0 2px 10px rgba(239,68,68,0.4);
+      }
+      .submit-action:disabled {
+        background: #52525b;
+        box-shadow: none;
+        cursor: not-allowed;
+        transform: none;
+        opacity: 0.7;
+      }
+
+      /* Nearby card compact styling */
+      .nearby-card { max-height: 200px; overflow-y: auto; }
+      .table-wrap { overflow-x: auto; width: 100%; }
+
+      /* Result box animation */
+      .result {
+        animation: fadeIn 0.4s ease;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 900px) {
+        .citizen-layout {
+          flex-direction: column;
+          padding: 16px;
+        }
+        .form-panel {
+          max-width: 100%;
+        }
+        .map-panel {
+          position: relative;
+          top: 0;
+          height: auto;
+        }
+        .map-panel #map { min-height: 350px; }
+      }
+    </style>
   </head>
   <body>
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
           <strong>SAFE_CONNECT</strong>
+          <span>Citizen Report Portal</span>
         </div>
         <div class="nav" style="display: flex; align-items: center; gap: 10px;">
-          <button id="langToggleBtn" class="btn" style="padding: 4px 10px; font-size: 12px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; cursor: pointer;">🌐 English</button>
-          <a href="{{ url_for('incidents.index') }}" data-i18n="nav_gateway">← Back to Gateway</a>
+          <button id="langToggleBtn" class="btn" style="padding: 4px 12px; font-size: 11px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); cursor: pointer; border-radius: 8px;">🌐 English</button>
+          <a href="{{ url_for('incidents.index') }}" data-i18n="nav_gateway">← Gateway</a>
         </div>
       </div>
     </div>
 
-    <div class="container">
-      <div class="grid">
-        <!-- MAP COLUMN -->
-        <div class="map-col">
-          <div style="width: 100%; min-height: 250px;">
-            <div class="card" id="mapCard">
-              <div id="map" style="border-radius: 24px;"></div>
+    <div class="citizen-layout">
+
+      <!-- LEFT: Map + Nearby Alerts -->
+      <div class="map-panel">
+        <div class="card">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>🗺 Live Radar Map</h2>
+            <span style="font-size: 11px; color: var(--muted);">Click map to set location</span>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <!-- Nearby incidents (hidden until location is set) -->
+        <div class="card" id="nearbyCard" style="display: none;">
+          <div class="card-header">
+            <h2 data-i18n="nearby_title">📡 Nearby Incidents</h2>
+          </div>
+          <div class="card-body nearby-card" style="padding: 0;">
+            <div class="table-wrap">
+              <table style="font-size: 12px;">
+                <thead>
+                  <tr>
+                    <th>Disaster</th>
+                    <th>Distance</th>
+                    <th>Status</th>
+                    <th>Hospital</th>
+                  </tr>
+                </thead>
+                <tbody id="nearbyTableBody">
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- NEARBY INCIDENTS COLUMN -->
-        <div class="nearby-col">
-          <div class="card" id="nearbyCard" style="display: none;">
-            <div class="card-header">
-              <h2 data-i18n="nearby_title">Nearby Incidents</h2>
-              <p data-i18n="nearby_desc">Live alerts around your location.</p>
-            </div>
-            <div class="card-body">
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Disaster</th>
-                      <th>Distance</th>
-                      <th>Status</th>
-                      <th>Allocated Hospital</th>
-                    </tr>
-                  </thead>
-                  <tbody id="nearbyTableBody">
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            </div>
-        </div>
-
-        <!-- FORM -->
+      <!-- RIGHT: Report Form -->
+      <div class="form-panel">
         <div class="card">
           <div class="card-header">
-            <h2 data-i18n="report_title">Report an incident</h2>
-            <p data-i18n="report_desc">Upload an image, add details, and submit. The backend runs human detection + disaster classification.</p>
+            <h2 data-i18n="report_title">⚠ Report an Incident</h2>
+            <p style="margin: 4px 0 0; font-size: 12px; color: var(--muted);" data-i18n="report_desc">Upload a photo and describe the situation. AI will analyze severity automatically.</p>
           </div>
 
-          <div class="card-body">
-            <div class="pill" style="margin-bottom: 10px;">
-              <span data-i18n="coordinates">Coordinates:</span> <span id="coordText">not set</span>
+          <div class="card-body" style="padding: 16px;">
+
+            <!-- GPS Coordinate Strip -->
+            <div class="gps-strip" style="margin-bottom: 14px;">
+              <span class="gps-icon">📍</span>
+              <span data-i18n="coordinates" style="color: var(--muted); font-size: 11px;">GPS:</span>
+              <span id="coordText">not set</span>
             </div>
 
-            <button class="btn" type="button" id="locateBtn" style="width: 100%; margin-bottom: 12px;" data-i18n="use_location">
-              Use my location
+            <button class="btn" type="button" id="locateBtn" style="width: 100%; margin-bottom: 16px; padding: 10px; font-size: 13px; border-radius: 10px;" data-i18n="use_location">
+              📡 Use my location
             </button>
 
             <form id="reportForm" enctype="multipart/form-data">
-              <div class="form-row">
+              <div style="display: flex; flex-direction: column; gap: 14px;">
 
+                <!-- Description -->
                 <div class="field">
                   <label for="description" data-i18n="description_label">Description</label>
                   <textarea id="description" name="description" required 
-                    data-i18n-placeholder="description_placeholder" placeholder="What happened? Any visible damage, injuries, trapped people, etc."></textarea>
+                    style="min-height: 100px; resize: vertical;"
+                    data-i18n-placeholder="description_placeholder" placeholder="What happened? Damage, injuries, trapped people..."></textarea>
                 </div>
 
+                <!-- Image Upload Zone -->
                 <div class="field">
-                  <label for="image" data-i18n="upload_image">Upload image</label>
-                  <input id="image" name="image" type="file" accept="image/*" required />
-                  <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
-                    <img id="imagePreview" src="" alt="Image Preview" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #ccc;"/>
+                  <label data-i18n="upload_image">Upload image</label>
+                  <div class="upload-zone">
+                    <input id="image" name="image" type="file" accept="image/*" required />
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-label"><strong>Click to upload</strong> or drag a photo here</div>
+                  </div>
+                  <div id="imagePreviewContainer" style="display: none; position: relative;">
+                    <img id="imagePreview" src="" alt="Preview" />
+                    <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 11px; color: #fff;">Selected</div>
                   </div>
                 </div>
 
@@ -112,68 +323,67 @@
                   });
                 </script>
 
-                <!-- Hidden fields for map -->
+                <!-- Hidden GPS fields -->
                 <input type="hidden" id="latitude" name="latitude" />
                 <input type="hidden" id="longitude" name="longitude" />
 
-                <button class="btn" id="submitBtn" type="submit" style="width: 100%;" data-i18n="submit_btn">
-                  Submit report
+                <button class="btn submit-action" id="submitBtn" type="submit" data-i18n="submit_btn">
+                  🚨 Submit Report
                 </button>
               </div>
             </form>
 
             <!-- RESULT -->
-            <div class="result" id="resultBox" style="white-space: pre-wrap;"></div>
+            <div class="result" id="resultBox" style="white-space: pre-wrap; margin-top: 14px;"></div>
 
           </div>
         </div>
       </div>
 
-      </div>
     </div>
 
     <script>
       const translations = {
         "en": {
-          "nav_gateway": "← Back to Gateway",
-          "nearby_title": "Nearby Incidents",
+          "nav_gateway": "← Gateway",
+          "nearby_title": "📡 Nearby Incidents",
           "nearby_desc": "Live alerts around your location.",
-          "report_title": "Report an incident",
-          "report_desc": "Upload an image, add details, and submit. The backend runs human detection + disaster classification.",
-          "coordinates": "Coordinates:",
-          "use_location": "Use my location",
+          "report_title": "⚠ Report an Incident",
+          "report_desc": "Upload a photo and describe the situation. AI will analyze severity automatically.",
+          "coordinates": "GPS:",
+          "use_location": "📡 Use my location",
           "description_label": "Description",
-          "description_placeholder": "What happened? Any visible damage, injuries, trapped people, etc.",
+          "description_placeholder": "What happened? Damage, injuries, trapped people...",
           "upload_image": "Upload image",
-          "submit_btn": "Submit report",
+          "submit_btn": "🚨 Submit Report",
           "lang_btn": "🌐 English"
         },
         "hi": {
-          "nav_gateway": "← गेटवे पर वापस",
-          "nearby_title": "आसपास की घटनाएँ",
+          "nav_gateway": "← गेटवे",
+          "nearby_title": "📡 आसपास की घटनाएँ",
           "nearby_desc": "आपके स्थान के आसपास लाइव अलर्ट।",
-          "report_title": "घटना की रिपोर्ट करें",
-          "report_desc": "एक छवि अपलोड करें, विवरण जोड़ें और सबमिट करें। बैकएंड मानव पहचान और आपदा वर्गीकरण चलाता है।",
-          "coordinates": "निर्देशांक:",
-          "use_location": "मेरे स्थान का उपयोग करें",
+          "report_title": "⚠ घटना की रिपोर्ट करें",
+          "report_desc": "एक छवि अपलोड करें, विवरण जोड़ें और सबमिट करें। AI गंभीरता का विश्लेषण करेगा।",
+          "coordinates": "GPS:",
+          "use_location": "📡 मेरे स्थान का उपयोग करें",
           "description_label": "विवरण",
-          "description_placeholder": "क्या हुआ? कोई दिखाई देने वाली क्षति, चोटें, फंसे हुए लोग आदि।",
+          "description_placeholder": "क्या हुआ? क्षति, चोटें, फंसे हुए लोग...",
           "upload_image": "छवि अपलोड करें",
-          "submit_btn": "रिपोर्ट सबमिट करें",
+          "submit_btn": "🚨 रिपोर्ट सबमिट करें",
           "lang_btn": "🌐 हिंदी"
         },
         "mr": {
-          "nav_gateway": "← गेटवेवर परत जा",
-          "nearby_title": "जवळपासच्या घटना",
+          "nav_gateway": "← गेटवे",
+          "nearby_title": "📡 जवळपासच्या घटना",
           "nearby_desc": "तुमच्या स्थानाभोवती थेट सूचना.",
-          "report_title": "घटनेची नोंद करा",
-          "report_desc": "एक प्रतिमा अपलोड करा, तपशील जोडा आणि सबमिट करा. बॅकएंड मानवी ओळख आणि आपत्ती वर्गीकरण चालवते.",
-          "coordinates": "अक्षांश-रेखांश:",
-          "use_location": "माझे स्थान वापरा",
+          "report_title": "⚠ घटनेची नोंद करा",
+          "report_desc": "एक प्रतिमा अपलोड करा आणि तपशील जोडा. AI गंभीरतेचे विश्लेषण करेल.",
+          "coordinates": "GPS:",
+          "use_location": "📡 माझे स्थान वापरा",
           "description_label": "वर्णन",
-          "description_placeholder": "काय झाले? काही दृश्यमान नुकसान, जखम, अडकलेले लोक इ.",
+          "description_placeholder": "काय झाले? नुकसान, जखम, अडकलेले लोक...",
           "upload_image": "प्रतिमा अपलोड करा",
-          "submit_btn": "अहवाल सबमिट करा",
+          "submit_btn": "🚨 अहवाल सबमिट करा",
           "lang_btn": "🌐 मराठी"
         }
       };
@@ -185,10 +395,8 @@
         currentLangIdx = (currentLangIdx + 1) % langs.length;
         const lang = langs[currentLangIdx];
         
-        // Update button text
         this.textContent = translations[lang]["lang_btn"];
 
-        // Update all elements with data-i18n
         document.querySelectorAll("[data-i18n]").forEach(el => {
           const key = el.getAttribute("data-i18n");
           if (translations[lang][key]) {
@@ -196,7 +404,6 @@
           }
         });
 
-        // Update all elements with data-i18n-placeholder
         document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
           const key = el.getAttribute("data-i18n-placeholder");
           if (translations[lang][key]) {

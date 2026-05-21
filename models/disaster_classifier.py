@@ -81,7 +81,8 @@ def predict_disaster(image_path: str, *, image_size: int = 224) -> DisasterPredi
             "Disaster classification requires `numpy` and `pillow`."
         ) from e
 
-    img = Image.open(image_path).convert("RGB").resize((image_size, image_size))
+    img = Image.open(image_path).convert(
+        "RGB").resize((image_size, image_size))
     arr = np.asarray(img, dtype=np.float32)
     arr = np.expand_dims(arr, axis=0)
     arr = preprocess_input(arr)
@@ -98,4 +99,3 @@ def predict_disaster(image_path: str, *, image_size: int = 224) -> DisasterPredi
     prob_map = {str(lbl): float(p) for lbl, p in zip(_labels, probs)}
 
     return DisasterPrediction(label=label, confidence=confidence, probabilities=prob_map)
-

@@ -8,10 +8,10 @@ let radarLayerGroup = null;
 let hospitalLayerGroup = null;
 
 function publicSeverityStyle(severity) {
-  if (severity === "CRITICAL") return { color: "#ef4444", radius: 900, pulseSize: 60, label: "CRITICAL" };
-  if (severity === "HIGH") return { color: "#f59e0b", radius: 700, pulseSize: 48, label: "HIGH" };
-  if (severity === "MEDIUM") return { color: "#3b82f6", radius: 500, pulseSize: 36, label: "MEDIUM" };
-  return { color: "#22c55e", radius: 350, pulseSize: 28, label: "LOW" };
+  if (severity === "CRITICAL") return { color: "#ef4444", radius: 900, pulseSize: 24, label: "CRITICAL" };
+  if (severity === "HIGH") return { color: "#f59e0b", radius: 700, pulseSize: 20, label: "HIGH" };
+  if (severity === "MEDIUM") return { color: "#3b82f6", radius: 500, pulseSize: 16, label: "MEDIUM" };
+  return { color: "#22c55e", radius: 350, pulseSize: 12, label: "LOW" };
 }
 
 function makePublicHospitalIcon(name) {
@@ -132,32 +132,48 @@ async function refreshRadarLayer() {
         .addTo(hospitalLayerGroup);
     });
 
-    // Draw animated radar signals for each incident
+    // Draw animated radar signals for each incident (or static for resolved)
     (data.radar_incidents || []).forEach((i) => {
-      const style = publicSeverityStyle(i.severity || "LOW");
-
-      // Outer transparent severity zone
-      L.circle([i.latitude, i.longitude], {
-        radius: style.radius,
-        color: style.color,
-        fillColor: style.color,
-        fillOpacity: 0.08,
-        weight: 1,
-        dashArray: "6 4",
-      }).addTo(radarLayerGroup);
-
-      // Pulsing radar icon
-      const icon = makeRadarIcon(style);
-      L.marker([i.latitude, i.longitude], { icon })
-        .bindPopup(
+      if (i.status === "RESOLVED" || i.status === "CLOSED") {
+        L.circleMarker([i.latitude, i.longitude], {
+          radius: 8,
+          color: "#888",
+          fillColor: "#888",
+          fillOpacity: 0.5,
+          weight: 2
+        }).bindPopup(
           `<div style="font-family: system-ui; min-width: 180px;">
-            <strong style="color: ${style.color};">\u26a0 ${style.label} ALERT</strong><br/>
+            <strong style="color: #888;">✔️ RESOLVED</strong><br/>
             <span style="font-size: 12px;">Incident #${i.id}</span><br/>
-            <span style="font-size: 12px;">Priority Score: <strong>${i.priority_score || 0}%</strong></span><br/>
             <span style="font-size: 11px; color: #888;">Type: ${i.disaster_type || "Unknown"}</span>
           </div>`
-        )
-        .addTo(radarLayerGroup);
+        ).addTo(radarLayerGroup);
+      } else {
+        const style = publicSeverityStyle(i.severity || "LOW");
+
+        // Outer transparent severity zone
+        L.circle([i.latitude, i.longitude], {
+          radius: style.radius,
+          color: style.color,
+          fillColor: style.color,
+          fillOpacity: 0.08,
+          weight: 1,
+          dashArray: "6 4",
+        }).addTo(radarLayerGroup);
+
+        // Pulsing radar icon
+        const icon = makeRadarIcon(style);
+        L.marker([i.latitude, i.longitude], { icon })
+          .bindPopup(
+            `<div style="font-family: system-ui; min-width: 180px;">
+              <strong style="color: ${style.color};">\u26a0 ${style.label} ALERT</strong><br/>
+              <span style="font-size: 12px;">Incident #${i.id}</span><br/>
+              <span style="font-size: 12px;">Priority Score: <strong>${i.priority_score || 0}%</strong></span><br/>
+              <span style="font-size: 11px; color: #888;">Type: ${i.disaster_type || "Unknown"}</span>
+            </div>`
+          )
+          .addTo(radarLayerGroup);
+      }
     });
 
   } catch {

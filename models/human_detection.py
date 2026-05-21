@@ -13,6 +13,7 @@ class HumanDetectionResult:
     boxes_xyxy: List[Tuple[int, int, int, int]]
     boxes_with_conf: List[Tuple[int, int, int, int, float]]
 
+
 _yolo_model: Optional["YOLO"] = None
 
 
@@ -69,4 +70,3 @@ def detect_humans(image_path: str, *, conf: float = 0.25, iou: float = 0.45) -> 
         boxes_with_conf.append((x1, y1, x2, y2, conf_score))
 
     return HumanDetectionResult(len(boxes_xyxy) > 0, boxes_xyxy, boxes_with_conf)
-

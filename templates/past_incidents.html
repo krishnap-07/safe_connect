@@ -20,10 +20,16 @@
       </div>
     </div>
     <div class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+      <div class="result" style="margin-bottom: 16px;">{{ msg }}</div>
+      {% endfor %}
+      {% endwith %}
+
       <div class="card">
         <div class="card-header">
           <h2>Past Incidents (Allocated)</h2>
-          <p>All incidents that have been allocated to a hospital.</p>
+          <p>All incidents that have been allocated to a hospital. Click a row to view the Final Report.</p>
         </div>
         <div class="card-body">
           <div class="table-wrap">
@@ -41,7 +47,7 @@
               </thead>
               <tbody>
                 {% for i in incidents %}
-                <tr>
+                <tr style="cursor: pointer;" onclick="openFinalReport({{ i.id }})">
                   <td>#{{ i.id }}</td>
                   <td>{{ i.created_at }}</td>
                   <td>{{ i.description }}</td>
@@ -57,5 +63,70 @@
         </div>
       </div>
     </div>
+
+    <!-- Final Report Modal -->
+    <div id="finalReportModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center;">
+      <div style="background: var(--panel); border: 1px solid var(--border); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; font-size: 16px; color: var(--text);" id="finalModalTitle">Final Incident Report</h2>
+          <span style="font-size: 24px; cursor: pointer; color: var(--muted);" onclick="closeFinalReportModal()">&times;</span>
+        </div>
+        <div style="padding: 16px; overflow-y: auto; flex: 1;" id="finalModalContent">
+          Loading...
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function closeFinalReportModal() {
+        document.getElementById("finalReportModal").style.display = "none";
+      }
+
+      async function openFinalReport(incidentId) {
+        document.getElementById("finalReportModal").style.display = "flex";
+        const contentDiv = document.getElementById("finalModalContent");
+        contentDiv.innerHTML = "Loading final report...";
+        
+        try {
+          const resp = await fetch(`/api/incident/${incidentId}/final-report`);
+          const data = await resp.json();
+          
+          if (data.success) {
+            const inc = data.incident;
+            contentDiv.innerHTML = `
+              <div style="margin-bottom: 20px;">
+                <p style="margin: 0 0 8px 0; color: var(--muted); font-size: 12px;">LOCATION</p>
+                <strong>${inc.latitude}, ${inc.longitude}</strong>
+              </div>
+              <div style="margin-bottom: 20px;">
+                <p style="margin: 0 0 8px 0; color: var(--muted); font-size: 12px;">DESCRIPTION</p>
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
+                  ${inc.description || "N/A"}
+                </div>
+              </div>
+              <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                <div style="flex: 1; background: rgba(57, 217, 138, 0.1); border: 1px solid var(--ok); padding: 16px; border-radius: 8px; text-align: center;">
+                  <h3 style="margin: 0 0 8px 0; color: var(--ok); font-size: 24px;">${data.rescued_count}</h3>
+                  <span style="font-size: 12px; color: var(--muted);">PEOPLE RESCUED/ADMITTED</span>
+                </div>
+                <div style="flex: 1; background: rgba(255, 50, 82, 0.1); border: 1px solid var(--danger); padding: 16px; border-radius: 8px; text-align: center;">
+                  <h3 style="margin: 0 0 8px 0; color: var(--danger); font-size: 24px;">${data.dead_count}</h3>
+                  <span style="font-size: 12px; color: var(--muted);">CASUALTIES (DEAD)</span>
+                </div>
+              </div>
+              <div style="margin-top: 24px; display: flex; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 16px;">
+                <form action="/officer/incident/${inc.id}/post-final-news" method="POST" style="margin: 0;">
+                  <button type="submit" class="btn" style="background: linear-gradient(135deg, #4A90E2, #0052cc);">📢 Post Final News to Telegram</button>
+                </form>
+              </div>
+            `;
+          } else {
+            contentDiv.innerHTML = `<p style="color: var(--danger);">Error: ${data.message}</p>`;
+          }
+        } catch (e) {
+          contentDiv.innerHTML = `<p style="color: var(--danger);">Failed to load report.</p>`;
+        }
+      }
+    </script>
   </body>
 </html>

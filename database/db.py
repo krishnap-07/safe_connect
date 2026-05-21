@@ -152,13 +152,22 @@ def insert_incident(
 
 def get_all_incidents(db_path: str) -> List[Dict[str, Any]]:
     with _connect(db_path) as conn:
-        rows = conn.execute("SELECT * FROM incidents ORDER BY datetime(created_at) DESC, id DESC").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM incidents ORDER BY datetime(created_at) DESC, id DESC").fetchall()
         return [dict(r) for r in rows]
+
+
+def get_incident_by_id(db_path: str, incident_id: int) -> Optional[Dict[str, Any]]:
+    with _connect(db_path) as conn:
+        row = conn.execute("SELECT * FROM incidents WHERE id = ?",
+                           (int(incident_id),)).fetchone()
+        return dict(row) if row else None
 
 
 def update_status(db_path: str, incident_id: int, new_status: str) -> None:
     with _connect(db_path) as conn:
-        conn.execute("UPDATE incidents SET status = ? WHERE id = ?", (new_status, int(incident_id)))
+        conn.execute("UPDATE incidents SET status = ? WHERE id = ?",
+                     (new_status, int(incident_id)))
         conn.commit()
 
 
@@ -182,17 +191,21 @@ def create_hospital(
             INSERT INTO hospitals (name, username, password_hash, latitude, longitude, total_beds, status, image_path, message, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (name, username, password_hash, float(latitude), float(longitude), int(total_beds), status, image_path, message, created_at),
+            (name, username, password_hash, float(latitude), float(longitude),
+             int(total_beds), status, image_path, message, created_at),
         )
         hospital_id = int(cur.lastrowid)
-        
+
         conn.commit()
         return hospital_id
 
+
 def approve_hospital(db_path: str, hospital_id: int) -> None:
     with _connect(db_path) as conn:
-        conn.execute("UPDATE hospitals SET status = 'APPROVED' WHERE id = ?", (int(hospital_id),))
+        conn.execute(
+            "UPDATE hospitals SET status = 'APPROVED' WHERE id = ?", (int(hospital_id),))
         conn.commit()
+
 
 def delete_hospital(db_path: str, hospital_id: int) -> None:
     with _connect(db_path) as conn:
@@ -211,13 +224,15 @@ def update_hospital_details(db_path: str, hospital_id: int, total_beds: int) -> 
 
 def get_hospital_by_username(db_path: str, username: str) -> Optional[Dict[str, Any]]:
     with _connect(db_path) as conn:
-        row = conn.execute("SELECT * FROM hospitals WHERE username = ?", (username,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM hospitals WHERE username = ?", (username,)).fetchone()
         return dict(row) if row else None
 
 
 def get_hospital_by_id(db_path: str, hospital_id: int) -> Optional[Dict[str, Any]]:
     with _connect(db_path) as conn:
-        row = conn.execute("SELECT * FROM hospitals WHERE id = ?", (int(hospital_id),)).fetchone()
+        row = conn.execute("SELECT * FROM hospitals WHERE id = ?",
+                           (int(hospital_id),)).fetchone()
         return dict(row) if row else None
 
 
@@ -257,7 +272,8 @@ def upsert_patient_record(
                     (hospital_id, incident_id, patient_name, condition_status, admitted, notes, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (int(hospital_id), incident_id, patient_name, condition_status, 1 if admitted else 0, notes, now, now),
+                (int(hospital_id), incident_id, patient_name,
+                 condition_status, 1 if admitted else 0, notes, now, now),
             )
             conn.commit()
             return int(cur.lastrowid)
@@ -268,7 +284,8 @@ def upsert_patient_record(
             SET patient_name = ?, condition_status = ?, admitted = ?, notes = ?, updated_at = ?
             WHERE id = ? AND hospital_id = ?
             """,
-            (patient_name, condition_status, 1 if admitted else 0, notes, now, int(record_id), int(hospital_id)),
+            (patient_name, condition_status, 1 if admitted else 0,
+             notes, now, int(record_id), int(hospital_id)),
         )
         conn.commit()
         return int(record_id)
@@ -289,3 +306,14 @@ def get_patient_records_for_hospital(db_path: str, hospital_id: int) -> List[Dic
         return [dict(r) for r in rows]
 
 
+def create_notification(db_path: str, target_role: str, target_hospital_id: Optional[int], message: str) -> None:
+    created_at = datetime.now(timezone.utc).isoformat()
+    with _connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO notifications (target_role, target_hospital_id, message, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (target_role, target_hospital_id, message, created_at),
+        )
+        conn.commit()

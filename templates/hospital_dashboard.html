@@ -153,8 +153,15 @@
             </div>
             <div class="field"><label>Patient Name</label><input name="patient_name" required style="padding: 10px;" />
             </div>
-            <div class="field"><label>Condition</label><input name="condition_status" required
-                placeholder="Critical / Stable / Observation" style="padding: 10px;" /></div>
+            <div class="field">
+              <label>Condition</label>
+              <select name="condition_status" required style="padding: 10px;">
+                <option value="Stable">Stable</option>
+                <option value="Observation">Observation</option>
+                <option value="Critical">Critical</option>
+                <option value="DEAD">DEAD (Deceased)</option>
+              </select>
+            </div>
             <div class="field">
               <label>Admitted</label>
               <select name="admitted" style="padding: 10px;">
